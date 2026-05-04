@@ -2,6 +2,7 @@
 #include <string>
 #include <windows.h>
 #include <queue>
+#include <stack>
 using namespace std;
 
 struct package {
@@ -79,6 +80,121 @@ struct list {
                 else
                     cout << "Посылка #" << number << " не найдена\n";
             }
+
+            void SecondQuarterReport() {
+                if (q.empty()) {
+                    cout << "Список посылок пуст\n";
+                    return;
+                }
+
+                // Получаем текущий год
+                time_t now = time(nullptr);
+                tm* ltm = localtime(&now);
+                int currentYear = 1900 + ltm->tm_year;
+                int lastYear = currentYear - 1;
+
+                queue<package> temp = q;
+                bool found = false;
+                int count = 0;
+
+                cout << "=== Отчет по посылкам за II квартал " << lastYear << " года ===\n\n";
+
+                while (!temp.empty()) {
+                    package pkg = temp.front();
+                    temp.pop();
+
+                    int month = pkg.date[1];  // месяц
+                    int year = pkg.date[2];   // год
+
+                    if (year == lastYear && month >= 4 && month <= 6) {
+                        found = true;
+                        count++;
+                        cout << "Посылка №" << pkg.number
+                             << " → " << pkg.point << "\n";
+                    }
+                }
+
+                if (!found) {
+                    cout << "Посылок, отправленных во втором квартале прошлого года, не найдено.\n";
+                } else {
+                    cout << "\nВсего найдено: " << count << " посылок.\n";
+                }
+            }
+
+            void TotalCostByPoint() {
+                if (q.empty()) {
+                    cout << "Список посылок пуст\n";
+                    return;
+                }
+
+                // Структура для хранения пункта и суммарной стоимости
+                struct PointCost {
+                    string point;
+                    int totalCost = 0;
+                };
+
+                stack<PointCost> resultStack;     // Стек для группировки
+                queue<package> temp = q;
+
+                // Обрабатываем все посылки
+                while (!temp.empty()) {
+                    package pkg = temp.front();
+                    temp.pop();
+
+                    bool found = false;
+
+                    // Создаём временный стек для поиска
+                    stack<PointCost> tempStack;
+
+                    // Ищем пункт назначения в resultStack
+                    while (!resultStack.empty()) {
+                        PointCost pc = resultStack.top();
+                        resultStack.pop();
+
+                        if (pc.point == pkg.point) {
+                            pc.totalCost += pkg.cost;
+                            tempStack.push(pc);
+                            found = true;
+                        } else {
+                            tempStack.push(pc);
+                        }
+                    }
+
+                    // Если пункт не найден — создаём новую запись
+                    if (!found) {
+                        PointCost newPC;
+                        newPC.point = pkg.point;
+                        newPC.totalCost = pkg.cost;
+                        tempStack.push(newPC);
+                    }
+
+                    // Возвращаем данные обратно в resultStack
+                    while (!tempStack.empty()) {
+                        resultStack.push(tempStack.top());
+                        tempStack.pop();
+                    }
+                }
+
+                // Вывод результата
+                if (resultStack.empty()) {
+                    cout << "Нет данных\n";
+                    return;
+                }
+
+                cout << "=== Общая стоимость посылок по пунктам назначения ===\n\n";
+
+                // Выводим из стека (в обратном порядке)
+                stack<PointCost> printStack = resultStack;  // копия для вывода
+
+                while (!printStack.empty()) {
+                    PointCost pc = printStack.top();
+                    printStack.pop();
+                    cout << "Пункт: " << pc.point
+                         << " | Общая стоимость: " << pc.totalCost << " руб.\n";
+                }
+
+                cout << "\nОтчет сформирован с использованием стека.\n";
+            }
 };
 
 package ReadPkgFromConsole() {
@@ -127,5 +243,8 @@ int main() {
     p2.point = "pyt-yah";
     l.editPackage(2, p2);
     l.print();
+
+    l.SecondQuarterReport();
+    l.TotalCostByPoint();
     return 0;
 }
